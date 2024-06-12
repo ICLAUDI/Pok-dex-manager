@@ -1,0 +1,38 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  username    String   @unique
+  email       String   @unique
+  passwordHash String
+  createdAt   DateTime @default(now())
+  sessions    Session[]
+  passwordResets PasswordReset[]
+}
+
+model Session {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  sessionToken String @unique
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+
+  user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PasswordReset {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  resetToken String @unique
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+
+  user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

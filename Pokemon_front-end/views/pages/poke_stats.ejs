@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dettagli Pokémon</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 flex flex-col items-center p-4">
+    <header class="w-full bg-red-600 p-4 text-center">
+        <h1 class="text-2xl font-bold" id="pokemon-name">Dettagli Pokémon</h1>
+    </header>
+    <main class="w-full max-w-xl bg-white border border-gray-300 rounded-lg shadow-md p-4 mt-4">
+        <div class="text-center">
+            <img id="pokemon-image" class="w-32 h-32 mx-auto" alt="Pokémon">
+            <h3 class="text-xl font-bold mt-2" id="pokemon-id"></h3>
+        </div>
+        <div class="mt-4">
+            <h4 class="text-lg font-bold">Tipi</h4>
+            <div id="pokemon-types" class="flex gap-2 mt-2">
+                <!-- Tipi dei Pokémon saranno inseriti qui tramite JavaScript -->
+            </div>
+        </div>
+        <div class="mt-4">
+            <h4 class="text-lg font-bold">Statistiche</h4>
+            <table class="min-w-full bg-white border border-gray-300">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-2 border">Stat</th>
+                        <th class="px-4 py-2 border">Value</th>
+                    </tr>
+                </thead>
+                <tbody id="pokemon-stats">
+                    <!-- Statistiche dei Pokémon saranno inserite qui tramite JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-4">
+            <h4 class="text-lg font-bold">Nature</h4>
+            <div id="pokemon-nature" class="mt-2">
+                <!-- Nature dei Pokémon saranno inserite qui tramite JavaScript -->
+            </div>
+        </div>
+        <div class="mt-4">
+            <h4 class="text-lg font-bold">Debolezze</h4>
+            <div id="pokemon-weaknesses" class="mt-2">
+                <!-- Debolezze dei Pokémon saranno inserite qui tramite JavaScript -->
+            </div>
+        </div>
+        <div class="mt-4">
+            <h4 class="text-lg font-bold">Evoluzioni</h4>
+            <div id="pokemon-evolutions" class="mt-2 flex flex-wrap gap-4">
+                <!-- Evoluzioni dei Pokémon saranno inserite qui tramite JavaScript -->
+            </div>
+        </div>
+        <div class="mt-4 text-center">
+            <button onclick="history.back()" class="bg-blue-500 text-white px-4 py-2 rounded">Torna indietro</button>
+        </div>
+    </main>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const IdPokemon= <%= pokemonId %>;
+    console.log(IdPokemon);
+
+            const typeColors = {
+                normal: 'bg-gray-400',
+                fire: 'bg-red-600',
+                water: 'bg-blue-600',
+                electric: 'bg-yellow-400',
+                grass: 'bg-green-500',
+                ice: 'bg-blue-200',
+                fighting: 'bg-red-700',
+                poison: 'bg-purple-600',
+                ground: 'bg-yellow-800',
+                flying: 'bg-blue-300',
+                psychic: 'bg-pink-600',
+                bug: 'bg-green-600',
+                rock: 'bg-gray-700',
+                ghost: 'bg-purple-700',
+                dragon: 'bg-indigo-700',
+                dark: 'bg-gray-800',
+                steel: 'bg-gray-500',
+                fairy: 'bg-pink-300',
+            };
+
+            function fetchPokemonData(pokemonId) {
+                fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonId}`)
+                    .then(response => response.json())
+                    .then(pokemon => {
+                        console.log(pokemon);
+                        document.getElementById('pokemon-name').innerText = pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1);
+                        document.getElementById('pokemon-image').src = pokemon.sprites.front_default;
+                        document.getElementById('pokemon-id').innerText = `ID: ${pokemon.id}`;
+
+                        const types = pokemon.types.map(typeInfo => typeInfo.type.name);
+                        const typeElements = types.map(type => `<span class="inline-block px-2 py-1 text-white rounded ${typeColors[type]}">${type.charAt(0).toUpperCase() + type.slice(1)}</span>`).join(' ');
+                        document.getElementById('pokemon-types').innerHTML = typeElements;
+
+                        const stats = pokemon.stats.map(stat => `<tr><td class="border px-4 py-2">${stat.stat.name}</td><td class="border px-4 py-2">${stat.base_stat}</td></tr>`).join('');
+                        document.getElementById('pokemon-stats').innerHTML = stats;
+
+                        // Fetch nature (this is a simplified example, normally you would fetch the nature data from another endpoint)
+                        fetch(pokemon.species.url)
+                            .then(response => response.json())
+                            .then(speciesData => {
+                                const nature = speciesData.flavor_text_entries.find(entry => entry.language.name === 'en').flavor_text;
+                                document.getElementById('pokemon-nature').innerText = nature;
+
+                                // Fetch evolutions
+                                fetch(speciesData.evolution_chain.url)
+                                    .then(response => response.json())
+                                    .then(evolutionData => {
+                                        let evolutionChain = evolutionData.chain;
+                                        const evolutionPromises = [];
+
+                                        do {
+                                            evolutionPromises.push(
+                                                fetch(`https://pokeapi.co/api/v2/pokemon/${evolutionChain.species.name}`)
+                                                    .then(response => response.json())
+                                                    .then(evolutionPokemon => {
+                                                        return {
+                                                            name: evolutionPokemon.name,
+                                                            image: evolutionPokemon.sprites.front_default,
+                                                            id: evolutionPokemon.id
+                                                        };
+                                                    })
+                                            );
+                                            evolutionChain = evolutionChain.evolves_to[0];
+                                        } while (evolutionChain && evolutionChain.evolves_to);
+
+                                        Promise.all(evolutionPromises).then(evolutions => {
+                                            const evolutionElements = evolutions.map(evolution => 
+                                                `<div class="flex flex-col items-center cursor-pointer" onclick="location.href='?pokemonId=${evolution.id}'">
+                                                    <img class="w-16 h-16" src="${evolution.image}" alt="${evolution.name}">
+                                                    <span class="inline-block px-2 py-1 text-white bg-blue-500 rounded">${evolution.name.charAt(0).toUpperCase() + evolution.name.slice(1)}</span>
+                                                </div>`
+                                            ).join(' ');
+                                            document.getElementById('pokemon-evolutions').innerHTML = evolutionElements;
+                                        });
+                                    });
+                            });
+
+                        // Calculate weaknesses (simplified example)
+                        fetch('https://pokeapi.co/api/v2/type')
+                            .then(response => response.json())
+                            .then(typeData => {
+                                const weaknesses = new Set();
+                                types.forEach(type => {
+                                    const typeInfo = typeData.results.find(t => t.name === type);
+                                    fetch(typeInfo.url)
+                                        .then(response => response.json())
+                                        .then(typeDetails => {
+                                            typeDetails.damage_relations.double_damage_from.forEach(damageType => weaknesses.add(damageType.name));
+                                            const weaknessElements = Array.from(weaknesses).map(weakness => `<span class="inline-block px-2 py-1 text-white rounded ${typeColors[weakness]}">${weakness.charAt(0).toUpperCase() + weakness.slice(1)}</span>`).join(' ');
+                                            document.getElementById('pokemon-weaknesses').innerHTML = weaknessElements;
+                                        });
+                                });
+                            });
+                    })
+                    .catch(error => console.error('Error fetching Pokémon data:', error));
+            }
+
+            fetchPokemonData(IdPokemon);
+        });
+    </script>
+</body>
+</html>
+
+
+

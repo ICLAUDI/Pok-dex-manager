@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokédex</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 flex flex-col items-center p-4">
+    <header class="w-full bg-red-600 p-4 text-center">
+        <h1 class="text-2xl font-bold">Pokédex</h1>
+    </header>
+    <div class="w-full max-w-xl mt-4">
+        <input type="text" id="search-bar" placeholder="Cerca Pokémon per nome" class="w-full p-2 border border-gray-300 rounded-lg">
+        <select id="type-filter" class="w-full mt-2 p-2 border border-gray-300 rounded-lg">
+            <option value="">Tutti i tipi</option>
+            <option value="normal">Normale</option>
+            <option value="fire">Fuoco</option>
+            <option value="water">Acqua</option>
+            <option value="electric">Elettrico</option>
+            <option value="grass">Erba</option>
+            <option value="ice">Ghiaccio</option>
+            <option value="fighting">Lotta</option>
+            <option value="poison">Veleno</option>
+            <option value="ground">Terra</option>
+            <option value="flying">Volante</option>
+            <option value="psychic">Psico</option>
+            <option value="bug">Coleottero</option>
+            <option value="rock">Roccia</option>
+            <option value="ghost">Spettro</option>
+            <option value="dragon">Drago</option>
+            <option value="dark">Buio</option>
+            <option value="steel">Acciaio</option>
+            <option value="fairy">Folletto</option>
+        </select>
+    </div>
+    <main class="flex flex-wrap justify-center gap-4 mt-4" id="pokedex">
+        <!-- I dati dei Pokémon saranno inseriti qui tramite JavaScript -->
+    </main>
+    <script src="/scripts/script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const pokedexContainer = document.getElementById('pokedex');
+            const searchBar = document.getElementById('search-bar');
+            const typeFilter = document.getElementById('type-filter');
+            
+            const typeColors = {
+                normal: 'bg-gray-400',
+                fire: 'bg-red-600',
+                water: 'bg-blue-600',
+                electric: 'bg-yellow-400',
+                grass: 'bg-green-500',
+                ice: 'bg-blue-200',
+                fighting: 'bg-red-700',
+                poison: 'bg-purple-600',
+                ground: 'bg-yellow-800',
+                flying: 'bg-blue-300',
+                psychic: 'bg-pink-600',
+                bug: 'bg-green-600',
+                rock: 'bg-gray-700',
+                ghost: 'bg-purple-700',
+                dragon: 'bg-indigo-700',
+                dark: 'bg-gray-800',
+                steel: 'bg-gray-500',
+                fairy: 'bg-pink-300',
+            };
+
+            let allPokemons = [];
+
+            fetch('https://pokeapi.co/api/v2/pokemon?limit=151')
+                .then(response => response.json())
+                .then(data => {
+                    const pokemonPromises = data.results.map(pokemon => fetch(pokemon.url).then(res => res.json()));
+                    return Promise.all(pokemonPromises);
+                })
+                .then(pokemons => {
+                    allPokemons = pokemons;
+                    displayPokemons(pokemons);
+                })
+                .catch(error => console.error('Error fetching Pokémon data:', error));
+
+            function displayPokemons(pokemons) {
+                pokedexContainer.innerHTML = '';
+                pokemons.forEach(pokemon => {
+                    const card = document.createElement('div');
+                    card.classList.add('bg-white', 'border', 'border-gray-300', 'rounded-lg', 'shadow-md', 'p-4', 'text-center', 'w-48', 'cursor-pointer');
+                    card.addEventListener('click', () => {
+                        window.location.href = 'http://localhost:3000/pokemon/' + pokemon.id;
+                    });
+
+                    const types = pokemon.types.map(typeInfo => typeInfo.type.name);
+                    const typeElements = types.map(type => `<span class="inline-block px-2 py-1 text-white rounded ${typeColors[type]}">${type.charAt(0).toUpperCase() + type.slice(1)}</span>`).join(' ');
+
+                    card.innerHTML = `
+                        <img class="w-24 h-24 mx-auto" src="${pokemon.sprites.front_default}" alt="${pokemon.name}">
+                        <h3 class="text-xl font-bold mt-2">${pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1)}</h3>
+                        <p class="text-gray-700"># ${pokemon.id}</p>
+                        <div class="mt-2">${typeElements}</div>
+                        <p class="text-gray-700 mt-2">Height: ${pokemon.height / 10} m</p>
+                        <p class="text-gray-700">Weight: ${pokemon.weight / 10} kg</p>
+                    `;
+                    pokedexContainer.appendChild(card);
+                });
+            }
+
+            searchBar.addEventListener('input', () => {
+                const searchQuery = searchBar.value.toLowerCase();
+                const filteredPokemons = allPokemons.filter(pokemon => pokemon.name.toLowerCase().includes(searchQuery));
+                displayPokemons(filteredPokemons);
+            });
+
+            typeFilter.addEventListener('change', () => {
+                const selectedType = typeFilter.value;
+                const filteredPokemons = selectedType
+                    ? allPokemons.filter(pokemon => pokemon.types.some(typeInfo => typeInfo.type.name === selectedType))
+                    : allPokemons;
+                displayPokemons(filteredPokemons);
+            });
+        });
+    </script>
+</body>
+</html>
